@@ -1,8 +1,8 @@
 name := "amqp-client"
 
-organization := "com.github.sstone"
+organization := "eu.shiftforward"
 
-version := "1.5-SNAPSHOT"
+version := "1.6.0"
 
 scalaVersion := "2.12.1"
 
@@ -23,4 +23,34 @@ libraryDependencies ++= {
     "ch.qos.logback"       % "logback-classic"      % "1.2.1" % "test",
     "junit"           	   % "junit"                % "4.12" % "test"
   )
+}
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+publishMavenStyle := true
+publishArtifact in Test := false
+
+licenses := Seq("MIT License" -> url("http://www.opensource.org/licenses/mit-license.php"))
+homepage := Some(url("https://github.com/ShiftForward/amqp-client"))
+
+pomExtra := {
+  <scm>
+    <url>https://github.com/ShiftForward/amqp-client.git</url>
+    <connection>scm:git:git@github.com:ShiftForward/amqp-client.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>sstone</id>
+      <name>Fabrice Drouin</name>
+      <roles>
+        <role>developer</role>
+      </roles>
+    </developer>
+  </developers>
 }
