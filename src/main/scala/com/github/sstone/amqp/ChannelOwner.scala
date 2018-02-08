@@ -11,6 +11,8 @@ import scala.util.Success
 import akka.event.LoggingReceive
 import scala.collection.mutable
 
+import java.util.UUID
+
 object ChannelOwner {
 
   sealed trait State
@@ -181,7 +183,7 @@ class ChannelOwner(init: Seq[Request] = Seq.empty[Request], channelParams: Optio
 
   def disconnected: Receive = LoggingReceive {
     case channel: Channel => {
-      val forwarder = context.actorOf(Props(new Forwarder(channel)), name = "forwarder")
+      val forwarder = context.actorOf(Props(new Forwarder(channel)), name = "forwarder-" + UUID.randomUUID.toString)
       forwarder ! AddShutdownListener(self)
       forwarder ! AddReturnListener(self)
       onChannel(channel, forwarder)
