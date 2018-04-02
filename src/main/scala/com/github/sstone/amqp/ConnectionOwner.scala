@@ -5,8 +5,8 @@ import akka.actor._
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import akka.util.Timeout
-import com.rabbitmq.client.{Connection, ShutdownSignalException, ShutdownListener, ConnectionFactory, Address => RMQAddress}
-import scala.concurrent.{ExecutionContext, Await}
+import com.rabbitmq.client.{AddressResolver, Connection, ConnectionFactory, ShutdownListener, ShutdownSignalException}
+import scala.concurrent.{Await, ExecutionContext}
 import concurrent.duration._
 import java.util.concurrent.ExecutorService
 import scala.util.{Failure, Success, Try}
@@ -25,7 +25,7 @@ object ConnectionOwner {
   case object CreateChannel
 
   def props(connFactory: ConnectionFactory, reconnectionDelay: FiniteDuration = 10000 millis,
-            executor: Option[ExecutorService] = None, addresses: Option[Array[RMQAddress]] = None): Props = Props(new ConnectionOwner(connFactory, reconnectionDelay, executor, addresses))
+            executor: Option[ExecutorService] = None, addressResolver: Option[AddressResolver] = None): Props = Props(new ConnectionOwner(connFactory, reconnectionDelay, executor, addressResolver))
 
   def createChildActor(conn: ActorRef, channelOwner: Props, name: Option[String] = None, timeout: Timeout = 5000.millis): ActorRef = {
     val future = conn.ask(Create(channelOwner, name))(timeout).mapTo[ActorRef]
@@ -75,7 +75,7 @@ object ConnectionOwner {
 class ConnectionOwner(connFactory: ConnectionFactory,
                       reconnectionDelay: FiniteDuration = 10000 millis,
                       executor: Option[ExecutorService] = None,
-                      addresses: Option[Array[RMQAddress]] = None) extends Actor with ActorLogging {
+                      addressResolver: Option[AddressResolver] = None) extends Actor with ActorLogging {
 
   import ConnectionOwner._
   import context.dispatcher
@@ -110,7 +110,7 @@ class ConnectionOwner(connFactory: ConnectionFactory,
   }
 
   def createConnection: Connection = {
-    val conn = (executor, addresses) match {
+    val conn = (executor, addressResolver) match {
       case (None, None) => connFactory.newConnection()
       case (Some(ex), None) => connFactory.newConnection(ex)
       case (None, Some(addr)) => connFactory.newConnection(addr)
@@ -169,11 +169,11 @@ class ConnectionOwner(connFactory: ConnectionFactory,
     case Abort(code, message) => {
       conn.abort(code, message)
       context.stop(self)
-    }    
+    }
     case Close(code, message, timeout) => {
       conn.close(code, message, timeout)
       context.stop(self)
-    }    
+    }
     case CreateChannel => Try(conn.createChannel()) match {
       case Success(channel) => sender ! channel
       case Failure(cause) => {
