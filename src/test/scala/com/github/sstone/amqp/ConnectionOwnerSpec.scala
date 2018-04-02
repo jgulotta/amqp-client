@@ -1,5 +1,7 @@
 package com.github.sstone.amqp
 
+import scala.collection.JavaConverters._
+
 import org.scalatest.{Matchers, WordSpecLike}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
@@ -9,7 +11,7 @@ import akka.pattern.gracefulStop
 import akka.util.Timeout
 import concurrent.duration._
 import concurrent.Await
-import com.rabbitmq.client.{Address, Channel, ConnectionFactory}
+import com.rabbitmq.client.{Address, Channel, ConnectionFactory, ListAddressResolver}
 import Amqp._
 import ConnectionOwner.{Connected, CreateChannel, Disconnected}
 import java.util.concurrent.TimeUnit
@@ -39,10 +41,10 @@ class ConnectionOwnerSpec extends TestKit(ActorSystem("TestSystem")) with WordSp
       connFactory.setUri(uri)
       val goodHost = connFactory.getHost
       connFactory.setHost("fake-host")
-      val conn = system.actorOf(ConnectionOwner.props(connFactory, addresses = Some(Array(
+      val conn = system.actorOf(ConnectionOwner.props(connFactory, addressResolver = Some(new ListAddressResolver(List(
           new Address("another.fake.host"),
           new Address(goodHost)
-        ))))
+        ).asJava))))
       Amqp.waitForConnection(system, conn).await(50, TimeUnit.SECONDS)
       val actors = 100
       for (i <- 0 until actors) {
