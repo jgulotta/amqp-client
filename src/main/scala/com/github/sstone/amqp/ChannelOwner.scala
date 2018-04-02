@@ -2,7 +2,7 @@ package com.github.sstone.amqp
 
 import collection.JavaConversions._
 import com.rabbitmq.client.AMQP.BasicProperties
-import com.rabbitmq.client._
+import com.rabbitmq.client.{Delivery => _, _}
 import akka.actor._
 import com.github.sstone.amqp.Amqp._
 import scala.util.Try
@@ -46,11 +46,6 @@ object ChannelOwner {
           def handleReturn(replyCode: Int, replyText: String, exchange: String, routingKey: String, properties: BasicProperties, body: Array[Byte]) {
             listener ! ReturnedMessage(replyCode, replyText, exchange, routingKey, properties, body)
           }
-        }))
-      }
-      case request@AddFlowListener(listener) => {
-        sender ! withChannel(channel, request)(c => c.addFlowListener(new FlowListener {
-          def handleFlow(active: Boolean): Unit = listener ! HandleFlow(active)
         }))
       }
       case request@Publish(exchange, routingKey, body, properties, mandatory, immediate) => {

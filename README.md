@@ -272,7 +272,7 @@ way, if your consumer fails to process the request or is disconnected, the broke
   }
   // wait 10 seconds and shut down
   Thread.sleep(10000)
-  system.shutdown()
+  system.terminate()
 
 ```
 
@@ -336,7 +336,7 @@ This is very useful if you want to break a single operation into multiple, paral
   }
   // wait 10 seconds and shut down
   Thread.sleep(10000)
-  system.shutdown()
+  system.terminate()
 
 ```
 
