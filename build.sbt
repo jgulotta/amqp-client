@@ -2,7 +2,7 @@ name := "amqp-client"
 
 organization := "eu.shiftforward"
 
-version := "1.6.2-SNAPSHOT"
+version := "1.6.2"
 
 scalaVersion := "2.12.5"
 
