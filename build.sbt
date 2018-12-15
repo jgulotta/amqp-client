@@ -4,9 +4,9 @@ organization := "eu.shiftforward"
 
 version := "1.6.3-SNAPSHOT"
 
-scalaVersion := "2.12.5"
+scalaVersion := "2.12.8"
 
-crossScalaVersions := Seq("2.11.12", "2.12.5")
+crossScalaVersions := Seq("2.11.12", "2.12.8")
 
 scalacOptions ++= Seq("-feature", "-language:postfixOps")
 
@@ -15,7 +15,7 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 libraryDependencies ++= {
   val akkaVersion = "2.5.11"
   Seq(
-    "com.rabbitmq"         % "amqp-client"          % "5.2.0",
+    "com.rabbitmq"         % "amqp-client"          % "5.5.1",
     "com.typesafe.akka"    %% "akka-actor"          % akkaVersion % "provided",
     "com.typesafe.akka"    %% "akka-slf4j"          % akkaVersion % "test",
     "com.typesafe.akka"    %% "akka-testkit"        % akkaVersion % "test",
