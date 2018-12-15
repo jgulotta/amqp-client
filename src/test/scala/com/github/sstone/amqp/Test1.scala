@@ -26,7 +26,7 @@ object Test1 extends App {
 
   // we initialize our consumer with an AddBinding request: the queue and the binding will be recreated if the connection
   // to the broker is lost and restored
-  val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener, StandardExchanges.amqDirect, queueParams, "my_key", channelParams = None, autoack = true))
+  val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener, StandardExchanges.amqDirect, queueParams, Set("my_key"), channelParams = None, autoack = true))
 
   // wait till everyone is actually connected to the broker
   Amqp.waitForConnection(system, consumer).await()

@@ -26,10 +26,10 @@ class ProducerSpec extends ChannelSpec {
       waitForConnection(system, conn, consumer, producer).await()
 
       // create a queue, bind it to "my_key" and consume from it
-      consumer ! AddBinding(Binding(exchange, queue, routingKey))
+      consumer ! AddBinding(Binding(exchange, queue, Set(routingKey)))
 
       fishForMessage(1 second) {
-        case Amqp.Ok(AddBinding(Binding(`exchange`, `queue`, `routingKey`)), _) => true
+        case Amqp.Ok(AddBinding(Binding(`exchange`, `queue`, routingKeys)), _) if routingKeys == Set(routingKey) => true
         case msg => {
           println(s"unexpected $msg")
           false
@@ -52,10 +52,10 @@ class ProducerSpec extends ChannelSpec {
       waitForConnection(system, conn, consumer, producer).await()
 
       // create a queue, bind it to our routing key and consume from it
-      consumer ! AddBinding(Binding(exchange, queue, routingKey))
+      consumer ! AddBinding(Binding(exchange, queue, Set(routingKey)))
 
       fishForMessage(1 second) {
-        case Amqp.Ok(AddBinding(Binding(`exchange`, `queue`, `routingKey`)), _) => true
+        case Amqp.Ok(AddBinding(Binding(`exchange`, `queue`, tal)), _) => true
         case _ => false
       }
 

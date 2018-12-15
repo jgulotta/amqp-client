@@ -13,8 +13,8 @@ object Consumer {
             consumerTag: String = "", noLocal: Boolean = false, exclusive: Boolean = false, arguments: Map[String, AnyRef] = Map.empty): Props =
     Props(new Consumer(listener, autoack, init, channelParams, consumerTag, noLocal, exclusive, arguments))
 
-  def props(listener: ActorRef, exchange: ExchangeParameters, queue: QueueParameters, routingKey: String, channelParams: Option[ChannelParameters], autoack: Boolean): Props =
-    props(Some(listener), init = List(AddBinding(Binding(exchange, queue, routingKey))), channelParams = channelParams, autoack = autoack)
+  def props(listener: ActorRef, exchange: ExchangeParameters, queue: QueueParameters, routingKeys: Set[String], channelParams: Option[ChannelParameters], autoack: Boolean): Props =
+    props(Some(listener), init = List(AddBinding(Binding(exchange, queue, routingKeys))), channelParams = channelParams, autoack = autoack)
 
   def props(listener: ActorRef, channelParams: Option[ChannelParameters], autoack: Boolean): Props = props(Some(listener), channelParams = channelParams, autoack = autoack)
 }
@@ -80,7 +80,7 @@ class Consumer(listener: Option[ActorRef],
       sender ! withChannel(channel, request)(c => {
         declareExchange(c, binding.exchange)
         val queueName = declareQueue(c, binding.queue).getQueue
-        c.queueBind(queueName, binding.exchange.name, binding.routingKey)
+        binding.routingKeys.foreach(rk => c.queueBind(queueName, binding.exchange.name, rk))
         val actualConsumerTag = c.basicConsume(queueName, autoack, consumerTag, noLocal, exclusive, arguments, consumer.get)
         log.debug(s"using consumer $actualConsumerTag")
         actualConsumerTag

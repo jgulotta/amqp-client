@@ -22,7 +22,7 @@ class ConsumerSpec extends ChannelSpec {
       producer ! AddStatusListener(probe.ref)
       probe.expectMsg(1 second, ChannelOwner.Connected)
       probe.expectMsg(1 second, ChannelOwner.Connected)
-      consumer ! AddBinding(Binding(exchange, queue, "my_key"))
+      consumer ! AddBinding(Binding(exchange, queue, Set("my_key")))
       val check = receiveOne(1 second)
       println(check)
       val message = "yo!".getBytes
@@ -68,7 +68,7 @@ class ConsumerSpec extends ChannelSpec {
       producer ! AddStatusListener(probe.ref)
       probe.expectMsg(1 second, ChannelOwner.Connected)
       probe.expectMsg(1 second, ChannelOwner.Connected)
-      consumer ! Record(AddBinding(Binding(exchange, queue, "my_key")))
+      consumer ! Record(AddBinding(Binding(exchange, queue, Set("my_key"))))
       val Amqp.Ok(AddBinding(_), _) = receiveOne(1 second)
 
       val message = "yo!".getBytes
@@ -98,7 +98,7 @@ class ConsumerSpec extends ChannelSpec {
       producer ! AddStatusListener(probe.ref)
       probe.expectMsg(1 second, ChannelOwner.Connected)
       probe.expectMsg(1 second, ChannelOwner.Connected)
-      consumer ! AddBinding(Binding(exchange, queue, "test_key"))
+      consumer ! AddBinding(Binding(exchange, queue, Set("test_key")))
       val Amqp.Ok(AddBinding(_), _) = receiveOne(1 second)
 
       // check that our exchange was created
