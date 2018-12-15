@@ -41,8 +41,8 @@ homepage := Some(url("https://github.com/ShiftForward/amqp-client"))
 
 pomExtra := {
   <scm>
-    <url>https://github.com/ShiftForward/amqp-client.git</url>
-    <connection>scm:git:git@github.com:ShiftForward/amqp-client.git</connection>
+    <url>https://github.com/velocidi/amqp-client.git</url>
+    <connection>scm:git:git@github.com:velocidi/amqp-client.git</connection>
   </scm>
   <developers>
     <developer>
