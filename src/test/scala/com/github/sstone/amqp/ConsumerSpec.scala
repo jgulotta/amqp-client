@@ -29,6 +29,31 @@ class ConsumerSpec extends ChannelSpec {
       producer ! Publish(exchange.name, "my_key", message)
       probe.expectMsgClass(1.second, classOf[Delivery])
     }
+    "receive messages sent by producers on distinct routing keys" in {
+      val exchange = ExchangeParameters(name = "amq.direct", exchangeType = "", passive = true)
+      val queue = QueueParameters(name = "", passive = false, exclusive = true)
+      ignoreMsg {
+        case Amqp.Ok(p:Publish, _) => true
+      }
+      val probe = TestProbe()
+      val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener = Some(probe.ref)), timeout = 5000 millis)
+      val producer = ConnectionOwner.createChildActor(conn, ChannelOwner.props())
+      consumer ! AddStatusListener(probe.ref)
+      producer ! AddStatusListener(probe.ref)
+      probe.expectMsg(1 second, ChannelOwner.Connected)
+      probe.expectMsg(1 second, ChannelOwner.Connected)
+      consumer ! AddBinding(Binding(exchange, queue, Set("my_key1", "my_key2")))
+      receiveOne(1 second)
+
+      producer ! Publish(exchange.name, "my_key1", "yo, rk1!".getBytes)
+      probe.expectMsgPF(1.second){
+        case Delivery(_, envelope, _, body) if new String (body) == "yo, rk1!" && envelope.getRoutingKey == "my_key1" => // OK
+      }
+      producer ! Publish(exchange.name, "my_key2", "yo, rk2!".getBytes)
+      probe.expectMsgPF(1.second){
+        case Delivery(_, envelope, _, body) if new String (body) == "yo, rk2!" && envelope.getRoutingKey == "my_key2" => // OK
+      }
+    }
     "be able to set their channel's prefetch size" in {
       val queue = randomQueue
       val probe = TestProbe()
@@ -68,11 +93,13 @@ class ConsumerSpec extends ChannelSpec {
       producer ! AddStatusListener(probe.ref)
       probe.expectMsg(1 second, ChannelOwner.Connected)
       probe.expectMsg(1 second, ChannelOwner.Connected)
-      consumer ! Record(AddBinding(Binding(exchange, queue, Set("my_key"))))
+      consumer ! Record(AddBinding(Binding(exchange, queue, Set("my_key1", "my_key2"))))
       val Amqp.Ok(AddBinding(_), _) = receiveOne(1 second)
 
       val message = "yo!".getBytes
-      producer ! Publish(exchange.name, "my_key", message)
+      producer ! Publish(exchange.name, "my_key1", message)
+      probe.expectMsgClass(1.second, classOf[Delivery])
+      producer ! Publish(exchange.name, "my_key2", message)
       probe.expectMsgClass(1.second, classOf[Delivery])
 
       // crash the consumer's channel
@@ -81,7 +108,9 @@ class ConsumerSpec extends ChannelSpec {
       probe.expectMsgAllOf(1 second, ChannelOwner.Disconnected, ChannelOwner.Connected)
       Thread.sleep(100)
 
-      producer ! Publish(exchange.name, "my_key", message)
+      producer ! Publish(exchange.name, "my_key1", message)
+      probe.expectMsgClass(1.second, classOf[Delivery])
+      producer ! Publish(exchange.name, "my_key2", message)
       probe.expectMsgClass(1.second, classOf[Delivery])
     }
     "declare queues and bindings" in {
