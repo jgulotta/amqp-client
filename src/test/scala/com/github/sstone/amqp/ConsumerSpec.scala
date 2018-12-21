@@ -33,7 +33,7 @@ class ConsumerSpec extends ChannelSpec {
       val exchange = ExchangeParameters(name = "amq.direct", exchangeType = "", passive = true)
       val queue = QueueParameters(name = "", passive = false, exclusive = true)
       ignoreMsg {
-        case Amqp.Ok(p:Publish, _) => true
+        case Amqp.Ok(p: Publish, _) => true
       }
       val probe = TestProbe()
       val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener = Some(probe.ref)), timeout = 5000 millis)
@@ -46,12 +46,12 @@ class ConsumerSpec extends ChannelSpec {
       receiveOne(1 second)
 
       producer ! Publish(exchange.name, "my_key1", "yo, rk1!".getBytes)
-      probe.expectMsgPF(1.second){
-        case Delivery(_, envelope, _, body) if new String (body) == "yo, rk1!" && envelope.getRoutingKey == "my_key1" => // OK
+      probe.expectMsgPF(1.second) {
+        case Delivery(_, envelope, _, body) if new String(body) == "yo, rk1!" && envelope.getRoutingKey == "my_key1" => // OK
       }
       producer ! Publish(exchange.name, "my_key2", "yo, rk2!".getBytes)
-      probe.expectMsgPF(1.second){
-        case Delivery(_, envelope, _, body) if new String (body) == "yo, rk2!" && envelope.getRoutingKey == "my_key2" => // OK
+      probe.expectMsgPF(1.second) {
+        case Delivery(_, envelope, _, body) if new String(body) == "yo, rk2!" && envelope.getRoutingKey == "my_key2" => // OK
       }
     }
     "be able to set their channel's prefetch size" in {
