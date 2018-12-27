@@ -1,16 +1,17 @@
 package com.github.sstone.amqp
 
 import collection.JavaConversions._
-import com.rabbitmq.client.AMQP.BasicProperties
+
+import com.rabbitmq.client.AMQP.{BasicProperties, Queue}
 import com.rabbitmq.client.{Delivery => _, _}
 import akka.actor._
 import com.github.sstone.amqp.Amqp._
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+
 import akka.event.LoggingReceive
 import scala.collection.mutable
-
 import java.util.UUID
 
 object ChannelOwner {
@@ -82,9 +83,9 @@ object ChannelOwner {
         log.debug("deleting queue {} ifUnused {} ifEmpty {}", queue, ifUnused, ifEmpty)
         sender ! withChannel(channel, request)(c => c.queueDelete(queue, ifUnused, ifEmpty))
       }
-      case request@QueueBind(queue, exchange, routingKey, args) => {
-        log.debug("binding queue {} to key {} on exchange {}", queue, routingKey, exchange)
-        sender ! withChannel(channel, request)(c => c.queueBind(queue, exchange, routingKey, args))
+      case request@QueueBind(queue, exchange, routingKeys, args) => {
+        log.debug("binding queue {} to keys {} on exchange {}", queue, routingKeys.mkString(", "), exchange)
+        sender ! withChannel(channel, request)(c => routingKeys.map(rk => c.queueBind(queue, exchange, rk, args)))
       }
       case request@QueueUnbind(queue, exchange, routingKey, args) => {
         log.debug("unbinding queue {} to key {} on exchange {}", queue, routingKey, exchange)

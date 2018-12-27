@@ -20,7 +20,7 @@ object Bug30Spec {
       self,
       exchange = Amqp.StandardExchanges.amqDirect,
       queue = QueueParameters("my_queue", passive = false, durable = false, exclusive = false, autodelete = true),
-      routingKey = "my_key",
+      routingKeys = Set("my_key"),
       channelParams = None,
       autoack = false))
 

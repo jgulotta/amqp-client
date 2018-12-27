@@ -27,7 +27,7 @@ class ChannelOwnerSpec extends ChannelSpec {
 
       // declare a queue, bind it to "my_test_key" on "amq.direct" and publish a message
       channelOwner ! DeclareQueue(QueueParameters(queue, passive = false, durable = false, autodelete = true))
-      channelOwner ! QueueBind(queue, "amq.direct", "my_test_key")
+      channelOwner ! QueueBind(queue, "amq.direct", Set("my_test_key"))
       channelOwner ! Publish("amq.direct", "my_test_key", "yo!".getBytes)
       receiveN(3, 2 seconds)
       Thread.sleep(100)

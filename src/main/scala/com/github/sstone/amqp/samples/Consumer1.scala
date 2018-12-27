@@ -44,7 +44,7 @@ object Consumer1 extends App {
   val queueParams = QueueParameters("my_queue", passive = false, durable = false, exclusive = false, autodelete = true)
   consumer ! DeclareQueue(queueParams)
   // bind it
-  consumer ! QueueBind(queue = "my_queue", exchange = "amq.direct", routing_key = "my_key")
+  consumer ! QueueBind(queue = "my_queue", exchange = "amq.direct", routingKeys = Set("my_key"))
   // tell our consumer to consume from it
   consumer ! AddQueue(QueueParameters(name = "my_queue", passive = false))
 

@@ -31,7 +31,7 @@ object RpcServer {
 
     /**
      * create a message that describes why processing a request failed. You would typically serialize the exception along with
-     * some context information. 
+     * some context information.
      * @param delivery delivery which cause process() to throw an exception
      * @param e exception that was thrown in process()
      * @return a ProcessResult instance
@@ -43,10 +43,10 @@ object RpcServer {
     Props(new RpcServer(processor, init, channelParams))
 
   def props(queue: QueueParameters, exchange: ExchangeParameters, routingKey: String, proc: RpcServer.IProcessor, channelParams: ChannelParameters)(implicit ctx: ExecutionContext): Props =
-    props(processor = proc, init = List(AddBinding(Binding(exchange, queue, routingKey))), channelParams = Some(channelParams))
+    props(processor = proc, init = List(AddBinding(Binding(exchange, queue, Set(routingKey)))), channelParams = Some(channelParams))
 
   def props(queue: QueueParameters, exchange: ExchangeParameters, routingKey: String, proc: RpcServer.IProcessor)(implicit ctx: ExecutionContext): Props =
-    props(processor = proc, init = List(AddBinding(Binding(exchange, queue, routingKey))))
+    props(processor = proc, init = List(AddBinding(Binding(exchange, queue, Set(routingKey)))))
 
 }
 

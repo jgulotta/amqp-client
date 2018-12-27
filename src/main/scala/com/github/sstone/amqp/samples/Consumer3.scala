@@ -34,7 +34,7 @@ object Consumer3 extends App {
   // create a queue, bind it to a routing key and consume from it
   // here we wrap our requests inside a Record message, so will be replayed if the connection to
   // the broker is lost and restored
-  consumer ! Record(AddBinding(Binding(StandardExchanges.amqDirect, queueParams, "my_key")))
+  consumer ! Record(AddBinding(Binding(StandardExchanges.amqDirect, queueParams, Set("my_key"))))
 
   // run the Producer sample now and see what happens
   println("press enter...")

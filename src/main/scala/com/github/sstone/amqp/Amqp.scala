@@ -75,7 +75,7 @@ object Amqp {
    */
   case class ChannelParameters(qos: Int, global: Boolean = false)
 
-  case class Binding(exchange: ExchangeParameters, queue: QueueParameters, routingKey: String)
+  case class Binding(exchange: ExchangeParameters, queue: QueueParameters, routingKeys: Set[String])
 
   /**
    * requests that can be sent to a ChannelOwner actor
@@ -84,7 +84,7 @@ object Amqp {
   sealed trait Request
 
   case class Abort(code: Int = AMQP.REPLY_SUCCESS, message: String = "OK") extends Request
-  
+
   case class AddStatusListener(listener: ActorRef) extends Request
 
   case class AddReturnListener(listener: ActorRef) extends Request
@@ -103,7 +103,7 @@ object Amqp {
 
   case class DeleteExchange(name: String, ifUnused: Boolean = false) extends Request
 
-  case class QueueBind(queue: String, exchange: String, routing_key: String, args: Map[String, AnyRef] = Map.empty) extends Request
+  case class QueueBind(queue: String, exchange: String, routingKeys: Set[String], args: Map[String, AnyRef] = Map.empty) extends Request
 
   case class QueueUnbind(queue: String, exchange: String, routing_key: String, args: Map[String, AnyRef] = Map.empty) extends Request
 
