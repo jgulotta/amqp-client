@@ -1,16 +1,17 @@
 package com.github.sstone.amqp
 
-import Amqp._
+import java.util.concurrent.ExecutorService
+
 import akka.actor._
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import akka.util.Timeout
+import com.github.sstone.amqp.Amqp._
 import com.rabbitmq.client.{AddressResolver, Connection, ConnectionFactory, ShutdownListener, ShutdownSignalException}
-import scala.concurrent.{Await, ExecutionContext}
-import concurrent.duration._
-import java.util.concurrent.ExecutorService
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-import collection.JavaConversions._
 
 object ConnectionOwner {
 
@@ -24,7 +25,7 @@ object ConnectionOwner {
 
   case object CreateChannel
 
-  def props(connFactory: ConnectionFactory, reconnectionDelay: FiniteDuration = 10000 millis,
+  def props(connFactory: ConnectionFactory, reconnectionDelay: FiniteDuration = 10000.millis,
             executor: Option[ExecutorService] = None, addressResolver: Option[AddressResolver] = None): Props = Props(new ConnectionOwner(connFactory, reconnectionDelay, executor, addressResolver))
 
   def createChildActor(conn: ActorRef, channelOwner: Props, name: Option[String] = None, timeout: Timeout = 5000.millis): ActorRef = {
@@ -83,14 +84,15 @@ class ConnectionOwner(connFactory: ConnectionFactory,
   var connection: Option[Connection] = None
   val statusListeners = collection.mutable.HashSet.empty[ActorRef]
 
-  val reconnectTimer = context.system.scheduler.schedule(10 milliseconds, reconnectionDelay, self, 'connect)
+  val reconnectTimer = context.system.scheduler.schedule(10.milliseconds, reconnectionDelay, self, "connect")
 
-  override def postStop = connection.map(c => Try(c.close()))
+  override def postStop = connection.foreach(c => Try(c.close()))
 
   override def unhandled(message: Any): Unit = message match {
     case Terminated(actor) if statusListeners.contains(actor) => {
       context.unwatch(actor)
       statusListeners.remove(actor)
+      ()
     }
     case _ => super.unhandled(message)
   }
@@ -117,9 +119,9 @@ class ConnectionOwner(connFactory: ConnectionFactory,
       case (Some(ex), Some(addr)) => connFactory.newConnection(ex, addr)
     }
     conn.addShutdownListener(new ShutdownListener {
-      def shutdownCompleted(cause: ShutdownSignalException) {
+      def shutdownCompleted(cause: ShutdownSignalException): Unit = {
         self ! Shutdown(cause)
-        statusListeners.map(a => a ! Disconnected)
+        statusListeners.foreach(a => a ! Disconnected)
        }
     })
     conn
@@ -132,7 +134,7 @@ class ConnectionOwner(connFactory: ConnectionFactory,
     /**
      * connect to the broker
      */
-    case 'connect => {
+    case "connect" => {
       log.debug(s"trying to connect ${toUri(connFactory)}")
       Try(createConnection) match {
         case Success(conn) => {
@@ -159,12 +161,12 @@ class ConnectionOwner(connFactory: ConnectionFactory,
     case Create(props, name) => {
       val child = createChild(props, name)
       log.debug("creating child {} while in disconnected state", child)
-      sender ! child
+      sender() ! child
     }
   }
 
   def connected(conn: Connection): Receive = LoggingReceive {
-    case 'connect => ()
+    case "connect" => ()
     case Amqp.Ok(_, _) => ()
     case Abort(code, message) => {
       conn.abort(code, message)
@@ -175,7 +177,7 @@ class ConnectionOwner(connFactory: ConnectionFactory,
       context.stop(self)
     }
     case CreateChannel => Try(conn.createChannel()) match {
-      case Success(channel) => sender ! channel
+      case Success(channel) => sender() ! channel
       case Failure(cause) => {
         log.error(cause, "cannot create channel")
         context.become(disconnected)
@@ -186,21 +188,22 @@ class ConnectionOwner(connFactory: ConnectionFactory,
       listener ! Connected
     }
     case Create(props, name) => {
-      sender ! createChild(props, name)
+      sender() ! createChild(props, name)
     }
     case Shutdown(cause) => {
       log.error(cause, "connection lost")
       connection = None
       context.children.foreach(_ ! Shutdown(cause))
-      self ! 'connect
+      self ! "connect"
       context.become(disconnected)
     }
   }
 
-  private def addStatusListener(listener: ActorRef) {
+  private def addStatusListener(listener: ActorRef): Unit = {
     if (!statusListeners.contains(listener)) {
       context.watch(listener)
       statusListeners.add(listener)
+      ()
     }
   }
 }

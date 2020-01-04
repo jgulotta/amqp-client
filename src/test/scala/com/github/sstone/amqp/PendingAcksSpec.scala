@@ -1,14 +1,15 @@
 package com.github.sstone.amqp
 
-import akka.actor.ActorDSL._
-import akka.actor.{PoisonPill, ActorLogging}
+import java.util.concurrent.TimeUnit
+
+import akka.actor.{Actor, ActorLogging, PoisonPill, Props}
 import akka.testkit.TestProbe
 import com.github.sstone.amqp.Amqp._
 import org.junit.runner.RunWith
 import org.scalatest.WordSpecLike
 import org.scalatest.junit.JUnitRunner
+
 import scala.concurrent.duration._
-import java.util.concurrent.TimeUnit
 
 @RunWith(classOf[JUnitRunner])
 class PendingAcksSpec extends ChannelSpec with WordSpecLike {
@@ -20,19 +21,19 @@ class PendingAcksSpec extends ChannelSpec with WordSpecLike {
       var counter = 0
 
       ignoreMsg {
-        case Amqp.Ok(p:Publish, _) => true
+        case Amqp.Ok(_:Publish, _) => true
       }
 
       val probe = TestProbe()
 
       // create a consumer that does not ack messages
-      val badListener = actor {
-        new Act with ActorLogging {
-          become {
-            case Delivery(consumerTag, envelope, properties, body) => {
+      val badListener = system actorOf Props {
+        new Actor with ActorLogging {
+          override def receive: Receive = {
+            case Delivery(_, envelope, _, body) => {
               log.info(s"received ${new String(body, "UTF-8")} tag = ${envelope.getDeliveryTag} redeliver = ${envelope.isRedeliver}")
               counter = counter + 1
-              if (counter == 10) probe.ref ! 'done
+              if (counter == 10) probe.ref ! "done"
             }
           }
         }
@@ -42,27 +43,27 @@ class PendingAcksSpec extends ChannelSpec with WordSpecLike {
       Amqp.waitForConnection(system, consumer, producer).await(1, TimeUnit.SECONDS)
 
       consumer ! AddBinding(Binding(exchange, queue, Set(routingKey)))
-      val Amqp.Ok(AddBinding(Binding(_, _, _)), _) = receiveOne(1 second)
+      val Amqp.Ok(AddBinding(Binding(_, _, _)), _) = receiveOne(1.second)
 
       val message = "yo!".getBytes
 
-      for (i <- 1 to 10) producer ! Publish(exchange.name, routingKey, message)
+      for (_ <- 1 to 10) producer ! Publish(exchange.name, routingKey, message)
 
-      probe.expectMsg(1 second, 'done)
+      probe.expectMsg(1.second, "done")
       assert(counter == 10)
 
       // now we should see 10 pending acks in the broker
 
       // create a consumer that does ack messages
       var counter1 = 0
-      val goodListener = actor {
-        new Act with ActorLogging {
-          become {
-            case Delivery(consumerTag, envelope, properties, body) => {
+      val goodListener = system actorOf Props {
+        new Actor with ActorLogging {
+          override def receive: Receive = {
+            case Delivery(_, envelope, _, body) => {
               log.info(s"received ${new String(body, "UTF-8")} tag = ${envelope.getDeliveryTag} redeliver = ${envelope.isRedeliver}")
               counter1 = counter1 + 1
-              sender ! Ack(envelope.getDeliveryTag)
-              if (counter1 == 10) probe.ref ! 'done
+              sender() ! Ack(envelope.getDeliveryTag)
+              if (counter1 == 10) probe.ref ! "done"
             }
           }
         }
@@ -72,12 +73,12 @@ class PendingAcksSpec extends ChannelSpec with WordSpecLike {
 
 
       consumer1 ! AddBinding(Binding(exchange, queue, Set(routingKey)))
-      val Amqp.Ok(AddBinding(Binding(_, _, _)), _) = receiveOne(1 second)
+      val Amqp.Ok(AddBinding(Binding(_, _, _)), _) = receiveOne(1.second)
 
       // kill first consumer
       consumer ! PoisonPill
 
-      probe.expectMsg(1 second, 'done)
+      probe.expectMsg(1.second, "done")
       assert(counter1 == 10)
     }
   }

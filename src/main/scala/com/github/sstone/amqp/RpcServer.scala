@@ -1,13 +1,13 @@
 package com.github.sstone.amqp
 
-import Amqp._
-import com.rabbitmq.client.AMQP.BasicProperties
-import com.rabbitmq.client.{Envelope, Channel}
-import concurrent.{ExecutionContext, Future}
-import util.{Failure, Success}
 import akka.actor.{ActorRef, Props}
 import akka.event.LoggingReceive
-import scala.concurrent.ExecutionContext
+import com.github.sstone.amqp.Amqp._
+import com.rabbitmq.client.AMQP.BasicProperties
+import com.rabbitmq.client.{Channel, Envelope}
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 object RpcServer {
 
@@ -39,7 +39,7 @@ object RpcServer {
     def onFailure(delivery: Delivery, e: Throwable): ProcessResult
   }
 
-  def props(processor: RpcServer.IProcessor, init: Seq[Request] = Seq.empty[Request], channelParams: Option[ChannelParameters] = None)(implicit ctx: ExecutionContext): Props =
+  def props(processor: RpcServer.IProcessor, init: collection.Seq[Request] = Seq.empty[Request], channelParams: Option[ChannelParameters] = None)(implicit ctx: ExecutionContext): Props =
     Props(new RpcServer(processor, init, channelParams))
 
   def props(queue: QueueParameters, exchange: ExchangeParameters, routingKey: String, proc: RpcServer.IProcessor, channelParams: ChannelParameters)(implicit ctx: ExecutionContext): Props =
@@ -60,10 +60,10 @@ object RpcServer {
  * @param processor [[com.github.sstone.amqp.RpcServer.IProcessor]] implementation
  * @param channelParams optional channel parameters
  */
-class RpcServer(processor: RpcServer.IProcessor, init: Seq[Request] = Seq.empty[Request], channelParams: Option[ChannelParameters] = None)(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global) extends Consumer(listener = None, autoack = false, init = init, channelParams = channelParams) {
+class RpcServer(processor: RpcServer.IProcessor, init: collection.Seq[Request] = Seq.empty[Request], channelParams: Option[ChannelParameters] = None)(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global) extends Consumer(listener = None, autoack = false, init = init, channelParams = channelParams) {
   import RpcServer._
 
-  private def sendResponse(result: ProcessResult, properties: BasicProperties, channel: Channel) {
+  private def sendResponse(result: ProcessResult, properties: BasicProperties, channel: Channel): Unit = {
     result match {
       // send a reply only if processor return something *and* replyTo is set
       case ProcessResult(Some(data), customProperties) if (properties.getReplyTo != null) => {
@@ -76,7 +76,7 @@ class RpcServer(processor: RpcServer.IProcessor, init: Seq[Request] = Seq.empty[
   }
 
   override def connected(channel: Channel, forwarder: ActorRef) : Receive = LoggingReceive({
-    case delivery@Delivery(consumerTag: String, envelope: Envelope, properties: BasicProperties, body: Array[Byte]) => {
+    case delivery@Delivery(_: String, envelope: Envelope, properties: BasicProperties, _: Array[Byte]) => {
       log.debug("processing delivery")
       processor.process(delivery).onComplete {
         case Success(result) => {

@@ -1,2 +1,3 @@
-addSbtPlugin("com.github.gseitz" % "sbt-release"  % "1.0.10")
-addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype" % "2.3")
+resolvers += "getty-releases" at "https://artifactory.getty.cloud/artifactory/dsa-releases"
+
+addSbtPlugin("com.gettyimages.dsa" % "sbt-dsa" % "3.1")

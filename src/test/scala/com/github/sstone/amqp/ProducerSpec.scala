@@ -1,17 +1,12 @@
 package com.github.sstone.amqp
 
+import akka.testkit.TestProbe
+import com.github.sstone.amqp.Amqp.{Binding, Delivery, Publish, _}
+import com.rabbitmq.client.AMQP.BasicProperties
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import akka.testkit.TestProbe
-import akka.actor.Props
-import concurrent.duration._
-import com.rabbitmq.client.AMQP.BasicProperties
-import com.github.sstone.amqp.Amqp._
-import com.github.sstone.amqp.Amqp.Publish
-import com.github.sstone.amqp.Amqp.ExchangeParameters
-import com.github.sstone.amqp.Amqp.Binding
-import com.github.sstone.amqp.Amqp.QueueParameters
-import com.github.sstone.amqp.Amqp.Delivery
+
+import scala.concurrent.duration._
 
 @RunWith(classOf[JUnitRunner])
 class ProducerSpec extends ChannelSpec {
@@ -21,14 +16,14 @@ class ProducerSpec extends ChannelSpec {
       val queue = randomQueue
       val routingKey = randomKey
       val probe = TestProbe()
-      val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener = Some(probe.ref)), timeout = 5000 millis, name = Some("ProducerSpec.consumer"))
-      val producer = ConnectionOwner.createChildActor(conn, ChannelOwner.props(), timeout = 5000 millis, name = Some("ProducerSpec.producer"))
+      val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener = Some(probe.ref)), timeout = 5000.millis, name = Some("ProducerSpec.consumer"))
+      val producer = ConnectionOwner.createChildActor(conn, ChannelOwner.props(), timeout = 5000.millis, name = Some("ProducerSpec.producer"))
       waitForConnection(system, conn, consumer, producer).await()
 
       // create a queue, bind it to "my_key" and consume from it
       consumer ! AddBinding(Binding(exchange, queue, Set(routingKey)))
 
-      fishForMessage(1 second) {
+      fishForMessage(1.second) {
         case Amqp.Ok(AddBinding(Binding(`exchange`, `queue`, routingKeys)), _) if routingKeys == Set(routingKey) => true
         case msg => {
           println(s"unexpected $msg")
@@ -47,15 +42,15 @@ class ProducerSpec extends ChannelSpec {
       val queue = randomQueue
       val routingKey = randomKey
       val probe = TestProbe()
-      val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener = Some(probe.ref)), timeout = 5000 millis)
+      val consumer = ConnectionOwner.createChildActor(conn, Consumer.props(listener = Some(probe.ref)), timeout = 5000.millis)
       val producer = ConnectionOwner.createChildActor(conn, ChannelOwner.props())
       waitForConnection(system, conn, consumer, producer).await()
 
       // create a queue, bind it to our routing key and consume from it
       consumer ! AddBinding(Binding(exchange, queue, Set(routingKey)))
 
-      fishForMessage(1 second) {
-        case Amqp.Ok(AddBinding(Binding(`exchange`, `queue`, tal)), _) => true
+      fishForMessage(1.second) {
+        case Amqp.Ok(AddBinding(Binding(`exchange`, `queue`, _)), _) => true
         case _ => false
       }
 

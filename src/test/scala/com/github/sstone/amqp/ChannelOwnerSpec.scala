@@ -1,16 +1,18 @@
 package com.github.sstone.amqp
 
-import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 import akka.testkit.TestProbe
-import akka.actor.{Props, Actor, DeadLetter}
+import akka.actor.{Actor, DeadLetter, Props}
 import akka.pattern.gracefulStop
 import java.util.concurrent.{CountDownLatch, TimeUnit}
+
 import concurrent.duration._
 import com.rabbitmq.client.AMQP.Queue
 import com.github.sstone.amqp.Amqp._
 import com.rabbitmq.client.GetResponse
 import com.github.sstone.amqp.ChannelOwner.NotConnectedError
+import org.scalatestplus.junit.JUnitRunner
+
 import scala.concurrent.Await
 
 @RunWith(classOf[JUnitRunner])
@@ -19,7 +21,7 @@ class ChannelOwnerSpec extends ChannelSpec {
 
     "implement basic error handling" in {
       channelOwner ! DeclareQueue(QueueParameters("no_such_queue", passive = true))
-      expectMsgClass(1 second, classOf[Amqp.Error])
+      expectMsgClass(1.second, classOf[Amqp.Error])
     }
 
     "allow users to create, bind, get from, purge and delete queues" in {
@@ -29,29 +31,29 @@ class ChannelOwnerSpec extends ChannelSpec {
       channelOwner ! DeclareQueue(QueueParameters(queue, passive = false, durable = false, autodelete = true))
       channelOwner ! QueueBind(queue, "amq.direct", Set("my_test_key"))
       channelOwner ! Publish("amq.direct", "my_test_key", "yo!".getBytes)
-      receiveN(3, 2 seconds)
+      receiveN(3, 2.seconds)
       Thread.sleep(100)
 
       // check that there is 1 message in the queue
       channelOwner ! DeclareQueue(QueueParameters(queue, passive = true))
-      val Amqp.Ok(_, Some(check1: Queue.DeclareOk)) = receiveOne(1 second)
+      val Amqp.Ok(_, Some(check1: Queue.DeclareOk)) = receiveOne(1.second)
 
       // receive from the queue
       channelOwner ! Get(queue, true)
-      val Amqp.Ok(_, Some(msg: GetResponse)) = receiveOne(1 second)
+      val Amqp.Ok(_, Some(msg: GetResponse)) = receiveOne(1.second)
       assert(new String(msg.getBody) == "yo!")
 
       // purge the queue
       channelOwner ! PurgeQueue(queue)
-      receiveOne(1 second)
+      receiveOne(1.second)
 
       // check that there are no more messages in the queue
       channelOwner ! DeclareQueue(QueueParameters(queue, passive = true))
-      val Amqp.Ok(_, Some(check2: Queue.DeclareOk)) = receiveOne(1 second)
+      val Amqp.Ok(_, Some(check2: Queue.DeclareOk)) = receiveOne(1.second)
 
       // delete the queue
       channelOwner ! DeleteQueue(queue)
-      val Amqp.Ok(_, Some(check3: Queue.DeleteOk)) = receiveOne(1 second)
+      val Amqp.Ok(_, Some(_: Queue.DeleteOk)) = receiveOne(1.second)
 
       assert(check1.getMessageCount === 1)
       assert(check2.getMessageCount === 0)
@@ -60,10 +62,10 @@ class ChannelOwnerSpec extends ChannelSpec {
 
   "return unroutable messages" in {
     channelOwner ! AddReturnListener(self)
-    val Amqp.Ok(_, None) = receiveOne(1 seconds)
+    val Amqp.Ok(_, None) = receiveOne(1.seconds)
     channelOwner ! Publish("", "no_such_queue", "test".getBytes)
-    val Amqp.Ok(_, None) = receiveOne(1 seconds)
-    expectMsgClass(1 seconds, classOf[ReturnedMessage])
+    val Amqp.Ok(_, None) = receiveOne(1.seconds)
+    expectMsgClass(1.seconds, classOf[ReturnedMessage])
   }
 
   "register status listeners" in {
@@ -93,11 +95,11 @@ class ChannelOwnerSpec extends ChannelSpec {
     val deadletterProbe = TestProbe()
     system.eventStream.subscribe(deadletterProbe.ref, classOf[DeadLetter])
 
-    Await.result(gracefulStop(statusListenerProbe, 5 seconds), 6 seconds)
+    Await.result(gracefulStop(statusListenerProbe, 5.seconds), 6.seconds)
 
     channelOwner ! DeclareQueue(QueueParameters("NO_SUCH_QUEUE", passive = true))
     expectMsgClass(classOf[Amqp.Error])
-    deadletterProbe.expectNoMsg(1 second)
+    deadletterProbe.expectNoMessage(1.second)
   }
 
   "return requests when not connected" in {
@@ -120,15 +122,15 @@ class ChannelOwnerSpec extends ChannelSpec {
     // we also test for Ok() here because it is possible, though very unlikely, that the
     // ChannelOwner had already received a new channel before it got our test request
     expectMsgPF() {
-      case NotConnectedError(testRequest) => true
-      case Ok(testRequest, _) => true
+      case NotConnectedError(_) => true
+      case Ok(_, _) => true
     }
   }
 
   "Multiple ChannelOwners" should {
     "each transition from Disconnected to Connected when they receive a channel" in {
       val concurrent = 10
-      val actors = for (i <- 1 until concurrent) yield ConnectionOwner.createChildActor(conn, ChannelOwner.props(), name = Some(i + "-instance"))
+      val actors = for (i <- 1 until concurrent) yield ConnectionOwner.createChildActor(conn, ChannelOwner.props(), name = Some(i.toString() + "-instance"))
       val latch = waitForConnection(system, actors: _*)
       latch.await(10000, TimeUnit.MILLISECONDS)
       latch.getCount should be(0)

@@ -1,22 +1,20 @@
 package com.github.sstone.amqp.samples
 
-import akka.actor.{Props, Actor, ActorSystem}
-import com.github.sstone.amqp.{ChannelOwner, ConnectionOwner, Amqp}
+import akka.actor.{Actor, ActorSystem, Props}
 import com.github.sstone.amqp.Amqp._
-import com.github.sstone.amqp.RpcServer.{ProcessResult, IProcessor}
+import com.github.sstone.amqp.{Amqp, ChannelOwner, ConnectionOwner}
 import com.rabbitmq.client.ConnectionFactory
-import scala.concurrent.{Future, ExecutionContext}
+
 import scala.concurrent.duration._
 
 object PublisherConfirms extends App {
-  import ExecutionContext.Implicits.global
 
   implicit val system = ActorSystem("mySystem")
 
   // create an AMQP connection
   val connFactory = new ConnectionFactory()
   connFactory.setUri("amqp://guest:guest@localhost/%2F")
-  val conn = system.actorOf(ConnectionOwner.props(connFactory, 1 second))
+  val conn = system.actorOf(ConnectionOwner.props(connFactory, 1.second))
 
   val producer = ConnectionOwner.createChildActor(conn, ChannelOwner.props())
   Amqp.waitForConnection(system, producer).await()
@@ -29,12 +27,12 @@ object PublisherConfirms extends App {
     producer ! DeclareQueue(QueueParameters(name = "my_queue", passive = false, durable = false, autodelete = true))
 
     def receive = {
-      case 'publishing_fails => {
+      case "publishing_fails" => {
         producer ! Publish("", "no_such_queue", "yo!".getBytes)
         producer ! Publish("", "no_such_queue", "yo!".getBytes)
         producer ! WaitForConfirms(None)
       }
-      case 'publishing_works => {
+      case "publishing_works" => {
         producer ! Publish("", "my_queue", "yo!".getBytes)
         producer ! Publish("", "my_queue", "yo!".getBytes)
         producer ! WaitForConfirms(None)
@@ -43,8 +41,8 @@ object PublisherConfirms extends App {
     }
   }
 
-  val foo = system.actorOf(Props[Foo])
-  foo ! 'publishing_fails
+  val foo = system.actorOf(Props(new Foo))
+  foo ! "publishing_fails"
   Thread.sleep(1000)
-  foo ! 'publishing_works
+  foo ! "publishing_works"
 }

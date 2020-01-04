@@ -1,24 +1,17 @@
 package com.github.sstone.amqp.samples
 
+import akka.actor.ActorSystem
 import akka.pattern.ask
-import akka.actor.{Actor, Props, ActorSystem}
-import com.github.sstone.amqp._
-import com.github.sstone.amqp.Amqp._
-import com.github.sstone.amqp.RpcServer.{ProcessResult, IProcessor}
-import com.github.sstone.amqp.RpcClient.Request
 import akka.util.Timeout
-import concurrent.{ExecutionContext, Future}
-import concurrent.duration._
-import util.{Failure, Success}
+import com.github.sstone.amqp.Amqp.{ChannelParameters, Delivery, Publish, QueueParameters, _}
+import com.github.sstone.amqp.RpcClient.Request
+import com.github.sstone.amqp.RpcServer.{IProcessor, ProcessResult}
+import com.github.sstone.amqp._
 import com.rabbitmq.client.ConnectionFactory
-import com.github.sstone.amqp.RpcServer.ProcessResult
-import com.github.sstone.amqp.Amqp.Publish
-import scala.util.Success
-import com.github.sstone.amqp.Amqp.ChannelParameters
-import scala.util.Failure
-import scala.Some
-import com.github.sstone.amqp.Amqp.QueueParameters
-import com.github.sstone.amqp.Amqp.Delivery
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 object OneToManyRpc extends App {
   import ExecutionContext.Implicits.global
@@ -29,7 +22,7 @@ object OneToManyRpc extends App {
   // create an AMQP connection
   val connFactory = new ConnectionFactory()
   connFactory.setUri("amqp://guest:guest@localhost/%2F")
-  val conn = system.actorOf(ConnectionOwner.props(connFactory, 1 second))
+  val conn = system.actorOf(ConnectionOwner.props(connFactory, 1.second))
 
   // typical "reply queue"; the name if left empty: the broker will generate a new random name
   val privateReplyQueue = QueueParameters("", passive = false, durable = false, exclusive = true, autodelete = true)
@@ -59,7 +52,7 @@ object OneToManyRpc extends App {
   Amqp.waitForConnection(system, rpcServers: _*).await()
   Amqp.waitForConnection(system, rpcClient).await()
 
-  implicit val timeout: Timeout = 2 seconds
+  implicit val timeout: Timeout = 2.seconds
 
   for (i <- 0 to 5) {
     val request = ("request " + i).getBytes

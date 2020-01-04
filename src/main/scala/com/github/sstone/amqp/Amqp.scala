@@ -1,13 +1,18 @@
 package com.github.sstone.amqp
 
-import collection.JavaConversions._
-import com.rabbitmq.client.AMQP.BasicProperties
-import com.rabbitmq.client.{AMQP, ShutdownSignalException, Channel, Envelope}
-import akka.actor.{Actor, Props, ActorRef, ActorRefFactory}
-import akka.actor.FSM.{SubscribeTransitionCallBack, CurrentState, Transition}
 import java.util.concurrent.CountDownLatch
 
+import akka.actor.{Actor, ActorRef, ActorRefFactory, Props}
+import com.rabbitmq.client.AMQP.BasicProperties
+import com.rabbitmq.client.{AMQP, Channel, Envelope, ShutdownSignalException}
+
 object Amqp {
+  import scala.language.implicitConversions
+  implicit def toJava[K, V](m: Map[K, V]): java.util.Map[K, V] = {
+    val jm = new java.util.HashMap[K, V](m.size)
+    m foreach { case (k, v) => jm.put(k, v) }
+    jm
+  }
 
   /**
    * queue parameters
